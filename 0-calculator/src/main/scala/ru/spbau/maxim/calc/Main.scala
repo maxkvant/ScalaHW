@@ -5,9 +5,9 @@ import ru.spbau.maxim.calc.ExprParser.evaluate
 import scala.io.StdIn
 
 /**
-  * simple console calculator
-  * supported: +, -, *, /, sin, cos, log, exp
-  * for instance: "exp(1+log(2)) * 3 - 1 / 2"
+  * Simple console calculator.
+  * Supported: +, -, *, /, sin, cos, log, exp,
+  * for instance: "exp(1+log(2)) * 3 - 1 / 2".
   */
 object Main {
   def main(args: Array[String]): Unit = {

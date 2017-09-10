@@ -16,23 +16,31 @@ object ExprParser extends JavaTokenParsers {
 
   private[this] def multSeq: Parser[Expr] = exprSimple ~ rep("*"~exprSimple | "/"~exprSimple) ^^ {
     case value ~ lst =>
-      (value /: lst) ((expr: Expr, tocken)  => BinOp(expr, tocken._1, tocken._2))
+      (value /: lst) ((expr: Expr, token)  => BinOp(expr, token._1, token._2))
   }
 
   private[this] def sumSeq: Parser[Expr] = multSeq ~ rep("+"~multSeq | "-"~multSeq) ^^ {
     case value ~ lst =>
-      (value /: lst) ((expr: Expr, tocken)  => BinOp(expr, tocken._1, tocken._2))
+      (value /: lst) ((expr: Expr, token)  => BinOp(expr, token._1, token._2))
   }
 
   private[this] def expr: Parser[Expr] = sumSeq
 
-  def parsedString(s: String): Expr = {
-    parseAll(expr, s.replace(" ", "")) match {
+  /**
+    * Parses str to syntax three of * extends Expr.
+    * Returns syntax three on success, otherwise throws RuntimeException.
+    */
+  def parsedString(str: String): Expr = {
+    parseAll(expr, str.replace(" ", "")) match {
       case Success(matched: Expr, _) => matched
       case Failure(msg,_) => throw new RuntimeException("parsing FAILURE: " + msg)
       case Error(msg,_) => throw new RuntimeException("parsing ERROR: " + msg)
     }
   }
 
+  /**
+    * Evaluates str to Double on success,
+    * otherwise throws RuntimeException
+    */
   def evaluate(s: String): Double = parsedString(s).evaluate
 }
