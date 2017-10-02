@@ -4,6 +4,6 @@ scala:
 os:
   - linux
 env:
-  - SOURCE_DIR_1=0-calculator
+  - SOURCE_DIR_1=4-multiset
 script:
   - cd $SOURCE_DIR_1 && sbt ++$TRAVIS_SCALA_VERSION test && cd ..
