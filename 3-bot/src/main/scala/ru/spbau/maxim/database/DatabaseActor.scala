@@ -2,25 +2,25 @@ package ru.spbau.maxim.database
 
 import akka.persistence.PersistentActor
 import info.mukel.telegrambot4s.models.ChatId
-import org.joda.time.{DateTime, Seconds}
+import org.joda.time.DateTime
 import ru.spbau.maxim.Main
 
 import scala.collection.mutable
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
 
 class DatabaseActor extends PersistentActor {
-
   import DatabaseActor._
 
   private val idToName: mutable.Map[ChatId, String] = mutable.Map()
   private val nameToId: mutable.Map[String, ChatId] = mutable.Map()
 
+  private val sended: mutable.Set[DelayedMessage] = mutable.Set()
+
   override def receiveRecover: Receive = {
     case evt: Event => receiveEvent(evt)
   }
 
-  def receiveEvent(evt: Event): Unit = {
+
+  private def receiveEvent(evt: Event): Unit = {
     println(evt)
     evt match {
       case UpdateUser(chatId, name) =>
@@ -30,14 +30,14 @@ class DatabaseActor extends PersistentActor {
       case RemoveUser(chatId) =>
         idToName.get(chatId).foreach(nameToId.remove)
         idToName.remove(chatId)
-      case DelayedMessage(chatId, time, text) =>
-        if (!time.isBeforeNow) {
-          val delay = Seconds.secondsBetween(DateTime.now, time).getSeconds * 1000
-          implicit val executionContext: ExecutionContext = Main.bot.executionContext
-          Main.system.scheduler.scheduleOnce(delay milliseconds) {
-            Main.bot.send(chatId, text)
-          }
-        }
+        println(idToName)
+        println(nameToId)
+      case msg: DelayedMessage =>
+        Main.bot.sendDelayed(msg)
+      case Sended(msg: DelayedMessage) =>
+        val res = sended(msg)
+        sended += msg
+        sender ! SendedStatus(res)
     }
   }
 
@@ -66,10 +66,13 @@ object DatabaseActor {
 
   case class DelayedMessage(to: ChatId, time: DateTime, text: String) extends Event
 
+  case class Sended(message: DelayedMessage) extends Event
+
   case class GetId(name: String)
 
   case class Id(chatId: Option[ChatId])
 
   case object GetRandomId
 
+  case class SendedStatus(status: Boolean)
 }
