@@ -40,7 +40,7 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
 
   def sendDelayed(message: DelayedMessage): Unit = message match {
     case DelayedMessage(chatId, time, text) =>
-      val delay: Long = Math.max(DateTime.now.getMillis - time.getMillis, timeout.duration.toMillis)
+      val delay: Long = Math.max(time.getMillis - DateTime.now.getMillis, timeout.duration.toMillis)
       Main.system.scheduler.scheduleOnce(delay milliseconds) {
         (db ? Sended(message)).map {
           case SendedStatus(false) => send(chatId, text)
