@@ -1,7 +1,6 @@
 package ru.spbau.maxim.parser
 
 import com.github.nscala_time.time.Imports._
-import org.joda.time.DateTime
 
 import scala.util.parsing.combinator.JavaTokenParsers
 
@@ -19,9 +18,7 @@ class MessageParser extends JavaTokenParsers {
     "[Оо]тправь ".r ~> receiver ~
       (("через" ~> delay) ^^ { delay => Some(delay) } | "" ^^ { _ => None }) ~
       "(.|\n)*\\z".r ^^ {
-      case to ~ delay ~ text => SendToMessage(to, delay.map {
-        DateTime.now() + _
-      }, text)
+      case to ~ delay ~ text => SendToMessage(to, delay, text)
     }
 
   def username: Parser[Username] = '@' ~> "[a-zA-Z0-9_]{5,}".r ^^ { name => Username(name) }
@@ -36,7 +33,7 @@ class MessageParser extends JavaTokenParsers {
 
   private def delayMinute: Parser[Period] = (wholeNumber <~ minute) ^^ { m => m.toInt.minutes }
 
-  private def minute: Parser[String] = "минуту" | "минута" | "минут" | "мин" | "м"
+  private def minute: Parser[String] = "минуту" | "минута" | "минуты" | "минут" | "мин" | "м"
 }
 
 object MessageParser extends MessageParser {

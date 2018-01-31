@@ -7,7 +7,6 @@ import info.mukel.telegrambot4s.api.declarative.Commands
 import info.mukel.telegrambot4s.api.{Polling, TelegramBot}
 import info.mukel.telegrambot4s.methods.{GetChat, SendMessage}
 import info.mukel.telegrambot4s.models.{ChatId, Message}
-import org.joda.time.DateTime
 import ru.spbau.maxim.database.DatabaseActor._
 import ru.spbau.maxim.parser._
 import ru.spbau.maxim.{Main, parser}
@@ -17,6 +16,8 @@ import scala.concurrent.duration._
 
 class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with Polling with Commands {
   private implicit val timeout: Timeout = Timeout(20.second)
+
+  import com.github.nscala_time.time.Imports._
 
   private val manualMessage =
     """
@@ -59,7 +60,10 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
           }
 
           parsedMessage match {
-            case SendToMessage(to, time, messageText) =>
+            case SendToMessage(to, delay, messageText) =>
+              val time: Option[DateTime] = delay.map {
+                DateTime.now() + _
+              }
               val txt = s"Анонимное собщение:\n$messageText"
               val futureChatId: Future[Any] = to match {
                 case Username(name) => db ? GetId(name)
@@ -72,7 +76,8 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
                 case Id(Some(chatId)) =>
                   time match {
                     case None => send(chatId, txt)
-                    case Some(timeSend) => db ! DelayedMessage(chatId, timeSend, txt)
+                    case Some(timeSend) =>
+                      db ! DelayedMessage(chatId, timeSend, txt)
                   }
                 case Id(None) => reply("мы не знакомы")
               }
@@ -100,7 +105,7 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
       )
     )
 
-  private def saveChat(chatId: ChatId): Future[Unit] =
+  private def saveChat(chatId: ChatId)(implicit message: Message): Future[Unit] =
     request(GetChat(chatId))
       .flatMap { chat =>
         chat.username match {
@@ -108,6 +113,7 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
             for (id <- db ? GetId(name)) yield id match {
               case Id(Some(_)) =>
               case _ => db ! UpdateUser(chatId, name)
+                reply("познакомились")
             }
           case None => Future {
             Unit

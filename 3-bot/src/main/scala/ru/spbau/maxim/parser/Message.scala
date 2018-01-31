@@ -1,12 +1,12 @@
 package ru.spbau.maxim.parser
 
-import org.joda.time.DateTime
+import org.joda.time.Period
 
 sealed trait Message
 
 //messages
 
-case class SendToMessage(to: Receiver, time: Option[DateTime], text: String) extends Message
+case class SendToMessage(to: Receiver, delay: Option[Period], text: String) extends Message
 
 case object RemoveMeMessage extends Message
 
