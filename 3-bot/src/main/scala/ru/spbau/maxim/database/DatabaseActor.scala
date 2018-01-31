@@ -21,7 +21,6 @@ class DatabaseActor extends PersistentActor {
 
 
   private def receiveEvent(evt: Event): Unit = {
-    println(evt)
     evt match {
       case UpdateUser(chatId, name) =>
         idToName.get(chatId).foreach(nameToId.remove)
@@ -30,14 +29,12 @@ class DatabaseActor extends PersistentActor {
       case RemoveUser(chatId) =>
         idToName.get(chatId).foreach(nameToId.remove)
         idToName.remove(chatId)
-        println(idToName)
-        println(nameToId)
       case msg: DelayedMessage =>
         Main.bot.sendDelayed(msg)
       case Sended(msg: DelayedMessage) =>
-        val res = sended(msg)
+        val status = sended(msg)
+        sender ! SendedStatus(status)
         sended += msg
-        sender ! SendedStatus(res)
     }
   }
 
@@ -57,8 +54,9 @@ class DatabaseActor extends PersistentActor {
 }
 
 object DatabaseActor {
-
   trait Event
+
+  // events
 
   case class UpdateUser(chatId: ChatId, name: String) extends Event
 
@@ -67,6 +65,8 @@ object DatabaseActor {
   case class DelayedMessage(to: ChatId, time: DateTime, text: String) extends Event
 
   case class Sended(message: DelayedMessage) extends Event
+
+  // not event commands
 
   case class GetId(name: String)
 

@@ -9,15 +9,12 @@ object Main {
   private val token = "510558039:AAGXFEZ8frRfzMkaJiCd9fH-ycSwZNBNNLs"
 
   val system = ActorSystem()
-  val scheduler = QuartzSchedulerExtension(system)
-  val actor: ActorRef = system.actorOf(Props(classOf[DatabaseActor]))
+  private val scheduler = QuartzSchedulerExtension(system)
+  private val actor: ActorRef = system.actorOf(Props(classOf[DatabaseActor]))
   val bot = new AnonMessageBot(token, actor)
 
   def main(args: Array[String]): Unit = {
     scheduler.createSchedule("every minute", None, "	0/1 * * 1/1 * ? *")
-
     bot.run()
   }
-
-
 }

@@ -10,16 +10,18 @@ class MessageParser extends JavaTokenParsers {
 
   def message: Parser[Message] = sendTo | selfRemove | manual
 
-  def manual: Parser[Message] = ("[Пп]ривет".r | "[Пп]рив".r | "[Сс]правка".r | "[Пп]омощь".r | "[Hh]elp".r | "[Mm]an".r) ^^ { _ => ManualMessage }
+  def manual: Parser[Message] =
+    ("[Пп]ривет".r | "[Пп]рив".r | "[Сс]правка".r | "[Пп]омощь".r | "[Hh]elp".r | "[Mm]an".r) ^^ { _ => ManualMessage }
 
   def selfRemove: Parser[Message] = ("[Уу]дали меня".r | "[Зз]абудь меня".r) ^^ { _ => RemoveMeMessage }
 
   def sendTo: Parser[SendToMessage] =
     "[Оо]тправь ".r ~> receiver ~
       (("через" ~> delay) ^^ { delay => Some(delay) } | "" ^^ { _ => None }) ~
-      "(.|\n)*\\z".r ^^ { case to ~ delay ~ text => SendToMessage(to, delay.map {
-      DateTime.now() + _
-    }, text)
+      "(.|\n)*\\z".r ^^ {
+      case to ~ delay ~ text => SendToMessage(to, delay.map {
+        DateTime.now() + _
+      }, text)
     }
 
   def username: Parser[Username] = '@' ~> "[a-zA-Z0-9_]{5,}".r ^^ { name => Username(name) }
@@ -28,7 +30,7 @@ class MessageParser extends JavaTokenParsers {
 
   def delay: Parser[Period] = (delayHour ~ delayMinute) ^^ { case h ~ m => h + m } | delayHour | delayMinute
 
-  private def delayHour: Parser[Period] = (wholeNumber <~ hour) ^^ { h => h.toInt.hours.underlying }
+  private def delayHour: Parser[Period] = (wholeNumber <~ hour) ^^ { h => h.toInt.hour }
 
   private def hour: Parser[String] = "часа" | "часов" | "час" | "ч"
 
@@ -38,13 +40,9 @@ class MessageParser extends JavaTokenParsers {
 }
 
 object MessageParser extends MessageParser {
-  def parse(text: String): Message = {
-    println(text)
-    val res = parse(message, text) match {
+  def parse(text: String): Message =
+    parse(message, text) match {
       case Success(message, _) => message
       case _ => WrongMessage
     }
-    print(res)
-    res
-  }
 }

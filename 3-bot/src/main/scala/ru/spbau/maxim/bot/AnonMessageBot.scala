@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with Polling with Commands {
-  private implicit val timeout: Timeout = Timeout(30.second)
+  private implicit val timeout: Timeout = Timeout(20.second)
 
   private val manualMessage =
     """
@@ -38,44 +38,15 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
       | * во времени можно указать только часы минут
     """.stripMargin
 
-
-  private def saveChat(chatId: ChatId) = {
-    println(chatId)
-    request(GetChat(chatId))
-      .flatMap { chat =>
-        val name = chat.username.head
-        for {
-          id <- db ? GetId(name)
-        } yield id match {
-          case Id(Some(_)) =>
-          case _ => db ! UpdateUser(chatId, name)
-        }
-      }
-  }
-
-  def sendDelayed(msg: DelayedMessage): Unit = msg match {
+  def sendDelayed(message: DelayedMessage): Unit = message match {
     case DelayedMessage(chatId, time, text) =>
-      val delay: Long = Math.max(20 * 1000, DateTime.now.getMillis - time.getMillis)
+      val delay: Long = Math.max(DateTime.now.getMillis - time.getMillis, timeout.duration.toMillis)
       Main.system.scheduler.scheduleOnce(delay milliseconds) {
-        (db ? Sended(msg)).map {
+        (db ? Sended(message)).map {
           case SendedStatus(false) => send(chatId, text)
           case _ =>
         }
       }
-  }
-
-  private def send(chatId: ChatId, text: String): Future[Message] = {
-    request(
-      SendMessage(
-        chatId,
-        text,
-        parseMode = None,
-        disableWebPagePreview = None,
-        disableNotification = None,
-        replyToMessageId = None,
-        replyMarkup = None
-      )
-    )
   }
 
   onMessage {
@@ -101,7 +72,6 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
                 case Id(Some(chatId)) =>
                   time match {
                     case None => send(chatId, txt)
-                      println(s" - - - - send $chatId: $txt")
                     case Some(timeSend) => db ! DelayedMessage(chatId, timeSend, txt)
                   }
                 case Id(None) => reply("мы не знакомы")
@@ -116,4 +86,32 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
       }
     }
   }
+
+  private def send(chatId: ChatId, text: String): Future[Message] =
+    request(
+      SendMessage(
+        chatId,
+        text,
+        parseMode = None,
+        disableWebPagePreview = None,
+        disableNotification = None,
+        replyToMessageId = None,
+        replyMarkup = None
+      )
+    )
+
+  private def saveChat(chatId: ChatId): Future[Unit] =
+    request(GetChat(chatId))
+      .flatMap { chat =>
+        chat.username match {
+          case Some(name) =>
+            for (id <- db ? GetId(name)) yield id match {
+              case Id(Some(_)) =>
+              case _ => db ! UpdateUser(chatId, name)
+            }
+          case None => Future {
+            Unit
+          }
+        }
+      }
 }
