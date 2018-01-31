@@ -43,8 +43,8 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
     case DelayedMessage(chatId, time, text) =>
       val delay: Long = Math.max(time.getMillis - DateTime.now.getMillis, timeout.duration.toMillis)
       Main.system.scheduler.scheduleOnce(delay milliseconds) {
-        (db ? Sended(message)).map {
-          case SendedStatus(false) => send(chatId, text)
+        (db ? ShouldSend(message)).map {
+          case SouldSendStatus(true) => send(chatId, text)
           case _ =>
         }
       }
@@ -81,7 +81,9 @@ class AnonMessageBot(val token: String, db: ActorRef) extends TelegramBot with P
                   }
                 case Id(None) => reply("мы не знакомы")
               }
-            case RemoveMeMessage => db ! RemoveUser(message.source)
+            case RemoveMeMessage =>
+              db ! RemoveUser(message.source)
+              reply("попробую забыть")
             case WrongMessage =>
               reply("ошибка")
               reply(manualMessage)

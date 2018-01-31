@@ -13,7 +13,7 @@ class DatabaseActor extends PersistentActor {
   private val idToName: mutable.Map[ChatId, String] = mutable.Map()
   private val nameToId: mutable.Map[String, ChatId] = mutable.Map()
 
-  private val sended: mutable.Set[DelayedMessage] = mutable.Set()
+  private val tryedSend: mutable.Set[DelayedMessage] = mutable.Set()
 
   override def receiveRecover: Receive = {
     case evt: Event => receiveEvent(evt)
@@ -31,10 +31,10 @@ class DatabaseActor extends PersistentActor {
         idToName.remove(chatId)
       case msg: DelayedMessage =>
         Main.bot.sendDelayed(msg)
-      case Sended(msg: DelayedMessage) =>
-        val status = sended(msg)
-        sender ! SendedStatus(status)
-        sended += msg
+      case ShouldSend(msg: DelayedMessage) =>
+        val status = (!tryedSend(msg)) & idToName.contains(msg.to)
+        sender ! SouldSendStatus(status)
+        tryedSend += msg
     }
   }
 
@@ -64,7 +64,7 @@ object DatabaseActor {
 
   case class DelayedMessage(to: ChatId, time: DateTime, text: String) extends Event
 
-  case class Sended(message: DelayedMessage) extends Event
+  case class ShouldSend(message: DelayedMessage) extends Event
 
   // not event commands
 
@@ -74,5 +74,5 @@ object DatabaseActor {
 
   case object GetRandomId
 
-  case class SendedStatus(status: Boolean)
+  case class SouldSendStatus(status: Boolean)
 }
