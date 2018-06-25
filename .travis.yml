@@ -1,10 +1,9 @@
-
 language: scala
 scala:
    - 2.11.2
 os:
   - linux
-env:
-  - SOURCE_DIR_1=0-calculator
+  - SOURCE_DIR_2=3-bot SOURCE_DIR_1=0-calculator
 script:
   - cd $SOURCE_DIR_1 && sbt ++$TRAVIS_SCALA_VERSION test && cd ..
+  - cd $SOURCE_DIR_2 && sbt ++$TRAVIS_SCALA_VERSION test && cd ..
